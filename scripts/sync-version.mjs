@@ -32,11 +32,14 @@ const targets = [
   {
     path: '.claude-plugin/plugin.json',
     label: 'plugin manifest',
-    transform: (s) => {
-      const manifest = JSON.parse(s);
-      manifest.version = VERSION;
-      return JSON.stringify(manifest, null, 2) + '\n';
-    },
+    // Regex replace (not reparse+reserialize) so prettier-controlled
+    // formatting decisions (e.g. keywords array on one line vs many) are
+    // preserved between releases and don't trigger phantom drift.
+    transform: (s) =>
+      s.replace(
+        /^(\s*"version":\s*)"\d+\.\d+\.\d+"/m,
+        `$1"${VERSION}"`
+      ),
   },
   {
     path: 'website/docusaurus.config.ts',
