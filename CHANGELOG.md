@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.1] - 2026-05-06
+
+### Added
+
+**Claude Code plugin manifest + cross-file version sync:**
+
+- New `.claude-plugin/plugin.json` at the repo root — Claude Code plugin manifest (single source of truth for plugin metadata, including `mcpServers` config). Lets the [`roomi-fields/claude-plugins`](https://github.com/roomi-fields/claude-plugins) aggregated marketplace source this project directly via `source: github` instead of maintaining a duplicated wrapper.
+- New `scripts/sync-version.mjs` + npm scripts `version:sync` / `version:check` — propagates `package.json.version` to the plugin manifest, `website/docusaurus.config.ts` (`softwareVersion`), and the README hero line. The release workflow runs `version:check` and fails the publish if anything has drifted, so a release can never ship with a stale plugin manifest or website badge.
+- README: new "Option 0 — Claude Code marketplace" Quick Start section pointing at the aggregated marketplace one-liner.
+
+### Changed
+
+- `.github/workflows/release.yml`: added a "Verify version sync" step before build/publish.
+
+---
+
 ## [1.7.0] - 2026-05-06
 
 ### Added

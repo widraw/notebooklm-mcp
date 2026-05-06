@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify version sync (plugin manifest, docs, README)
+        run: npm run version:check
+
       - name: Build
         run: npm run build
 

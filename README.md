@@ -4,7 +4,7 @@
 
 **Automate Google NotebookLM at scale. 33-endpoint HTTP REST API for n8n / Zapier / Make / curl, plus an MCP server for Claude Code / Cursor / Codex. Citation-backed Q&A, full Studio generation (audio · video · infographic · report · presentation · data table), multi-account rotation with auto-reauth.**
 
-> v1.7.0 — production-grade, batch-tested on overnight runs of 1 000+ questions. New: `batch_to_vault` is now a first-class MCP tool (no HTTP server required) on top of the existing `POST /batch-to-vault` endpoint. See [RTFM integration](./deployment/docs/14-RTFM-INTEGRATION.md) for the full pattern. [Compare with `PleasePrompto/notebooklm-mcp` v2.0.0](https://roomi-fields.github.io/notebooklm-mcp/compare) to see when this project is the right pick (REST API, full Studio, auto-reauth) and when the MCP-only upstream is.
+> v1.7.1 — production-grade, batch-tested on overnight runs of 1 000+ questions. New: `batch_to_vault` is now a first-class MCP tool (no HTTP server required) on top of the existing `POST /batch-to-vault` endpoint. See [RTFM integration](./deployment/docs/14-RTFM-INTEGRATION.md) for the full pattern. [Compare with `PleasePrompto/notebooklm-mcp` v2.0.0](https://roomi-fields.github.io/notebooklm-mcp/compare) to see when this project is the right pick (REST API, full Studio, auto-reauth) and when the MCP-only upstream is.
 
 <!-- Badges -->
 
@@ -71,6 +71,17 @@ Generate multiple content types from your notebook sources:
 ---
 
 ## Quick Start
+
+### Option 0 — Claude Code marketplace (one-liner, recommended for Claude Code users)
+
+The fastest way to get NotebookLM into Claude Code. Distributed via the [`roomi-fields/claude-plugins`](https://github.com/roomi-fields/claude-plugins) marketplace alongside [RTFM](https://github.com/roomi-fields/rtfm) (the retrieval companion — see [RTFM integration guide](./deployment/docs/14-RTFM-INTEGRATION.md)):
+
+```text
+/plugin marketplace add roomi-fields/claude-plugins
+/plugin install notebooklm@roomi-fields
+```
+
+That registers the MCP server, runs `npx -y @roomi-fields/notebooklm-mcp` automatically on first use (Node ≥ 18 required), and keeps you in sync with releases via `/plugin update`. Then run `npm run setup-auth` once to log into Google. To install RTFM at the same time: `/plugin install rtfm@roomi-fields`.
 
 ### Option 1 — HTTP REST API (n8n, Zapier, Make, curl, any HTTP client)
 
@@ -163,6 +174,7 @@ See [ROADMAP.md](./ROADMAP.md) for planned features and version history.
 
 **Latest releases:**
 
+- **v1.7.1** — Claude Code plugin manifest (`.claude-plugin/plugin.json`) + cross-file version sync script enforced in CI; README "Install via Claude Code marketplace" one-liner
 - **v1.7.0** — `batch_to_vault` exposed as a first-class MCP tool (parity with the HTTP endpoint, no localhost server required); shared `runBatchToVault` helper deduplicates the loop across both transports
 - **v1.6.0** — `/batch-to-vault` endpoint + RTFM integration (`nblm-answer-v1` JSON Schema published at [schemas.roomi-fields.com/nblm-answer-v1.json](https://schemas.roomi-fields.com/nblm-answer-v1.json)) for caching NotebookLM answers as a searchable markdown vault
 - **v1.5.9** — Restore `mcpName` field for MCP Registry npm-package ownership verification
