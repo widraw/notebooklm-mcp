@@ -557,6 +557,16 @@ export class ContentManager {
       // IMPORTANT: Exclude the "Search the web" search bar which is always visible
       log.info(`  🔍 Looking for URL input...`);
       const urlInputSelectors = [
+        // 2026 redesign: the "Websites" sub-view exposes a textarea with
+        // aria-label="Enter URLs" / placeholder="Paste any links". These
+        // aria-label selectors must come FIRST so they win against the
+        // generic [role="dialog"] textarea fallback below, which would
+        // otherwise grab the always-present "Search the web" box.
+        'textarea[aria-label*="Enter URL" i]',
+        'textarea[aria-label*="URL" i]',
+        'input[aria-label*="Enter URL" i]',
+        'input[aria-label*="URL" i]',
+        'textarea[placeholder*="Paste any link" i]',
         // i18n placeholder selectors
         ...i18nSelectors('input[placeholder*="{text}"]', 'placeholders', 'pasteUrl'),
         ...i18nSelectors('textarea[placeholder*="{text}"]', 'placeholders', 'pasteUrl'),
