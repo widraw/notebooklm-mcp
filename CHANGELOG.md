@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-07-11
+
+### Fixed — new-answer detection could time out on a repeated answer text
+
+`waitForLatestAnswer` (used by `notebook_ask` and every Studio content
+generation flow) identified "the new answer" by hashing its text and
+comparing against the texts captured before the question was submitted.
+If NotebookLM answered the new question with the exact same text as an
+earlier answer in the same notebook (e.g. two questions both answered
+"Yes", or repeated short/deterministic test prompts), the new answer's
+hash collided with an already-known one and was skipped as "seen" —
+the wait then timed out after the full 5-minute budget despite the
+answer being stable and visible in the page.
+
+Fixed by identifying the new answer via DOM position instead: NotebookLM
+adds exactly one new `.to-user-container` per submitted question, so
+"any container added after a pre-submission baseline count" is immune
+to text collisions. New `countAnswerContainers()` helper in
+`page-utils.ts`; the position baseline is threaded through
+`notebook_ask`, `content_generate`'s chat-fallback path, and the audio
+overview chat-fallback path. Falls back to the previous hash-based
+comparison when no baseline is supplied (unchanged behavior for that
+case). 4 new regression tests reproduce the exact hash-collision
+scenario and assert the position-based path resolves it.
+
+Root cause identified while reviewing a similar diagnosis in
+[PleasePrompto/notebooklm-mcp#61](https://github.com/PleasePrompto/notebooklm-mcp/pull/61)
+— thanks to [@macho715](https://github.com/macho715) for the writeup;
+this fix is our own implementation, adapted to this project's
+architecture.
+
+### Fixed — orphan process on stdio disconnect
+
+The server only handled `SIGINT`/`SIGTERM` for graceful shutdown. MCP
+clients (Claude Desktop, Claude Code, Codex, …) signal disconnect by
+closing the stdio pipe, not by sending a signal — without a handler for
+that, the process could stay alive as an orphan with its browser session
+still open. Now also shuts down on stdin `end`/`close`. Inspired by
+[PleasePrompto/notebooklm-mcp#47](https://github.com/PleasePrompto/notebooklm-mcp/pull/47)
+(credit: [@altristech2025](https://github.com/altristech2025)).
+
+### Added — Japanese UI locale
+
+New `src/i18n/ja.json`, registered alongside fr/en/de. Best-effort
+translations, not runtime-validated against a live Japanese NotebookLM
+account — open an issue if any string is off. Inspired by
+[PleasePrompto/notebooklm-mcp#51](https://github.com/PleasePrompto/notebooklm-mcp/pull/51)
+(credit: [@toshieji](https://github.com/toshieji)), reimplemented against
+this project's i18n system rather than ported directly (different
+codebase architecture).
+
+---
+
 ## [2.1.1] - 2026-07-11
 
 ### Added — Thai locale selectors for `notebook_create` (#18, partial)

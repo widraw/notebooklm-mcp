@@ -1,5 +1,5 @@
 /**
- * i18n locale tests — ensure all shipped locales (en / fr / de) have
+ * i18n locale tests — ensure all shipped locales (en / fr / de / ja) have
  * matching shape so SelectorBuilder can iterate them safely. Catches the
  * class of bug where a new locale file ships with a missing key and the
  * selector pipeline silently skips that text.
@@ -31,8 +31,8 @@ function leafKeys(obj: unknown, prefix = ''): string[] {
 }
 
 describe('i18n locales', () => {
-  it('ships en, fr and de as supported locales', () => {
-    expect(getSupportedLocales()).toEqual(expect.arrayContaining(['en', 'fr', 'de']));
+  it('ships en, fr, de and ja as supported locales', () => {
+    expect(getSupportedLocales()).toEqual(expect.arrayContaining(['en', 'fr', 'de', 'ja']));
   });
 
   it('every locale exposes the same leaf keys as en (no missing translations)', () => {
@@ -55,11 +55,12 @@ describe('i18n locales', () => {
 
   it('SelectorBuilder emits selectors for every locale', () => {
     const built = selectors().buttonWithText('addSource').build();
-    // 3 locales × 1 selector pattern, minus dedup if same text in two locales.
-    // Each locale has a unique "Add source" translation so we expect 3 distinct.
-    expect(built.length).toBe(3);
+    // 4 locales × 1 selector pattern, minus dedup if same text in two locales.
+    // Each locale has a unique "Add source" translation so we expect 4 distinct.
+    expect(built.length).toBe(4);
     expect(built.some((s) => s.includes('Quelle hinzufügen'))).toBe(true);
     expect(built.some((s) => s.includes('Ajouter une source'))).toBe(true);
     expect(built.some((s) => s.includes('Add source'))).toBe(true);
+    expect(built.some((s) => s.includes('ソースを追加'))).toBe(true);
   });
 });

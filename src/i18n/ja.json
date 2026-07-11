@@ -1,0 +1,120 @@
+{
+  "$schema": "./locale-schema.json",
+  "locale": "ja",
+  "name": "日本語",
+  "description": "Japanese UI selectors for NotebookLM (community contribution — open an issue if a string is wrong)",
+
+  "tabs": {
+    "sources": "ソース",
+    "discussion": "チャット",
+    "studio": "Studio"
+  },
+
+  "buttons": {
+    "addSource": "ソースを追加",
+    "addNote": "メモを追加",
+    "newNote": "新しいメモ",
+    "insert": "挿入",
+    "add": "追加",
+    "upload": "アップロード",
+    "delete": "削除",
+    "remove": "削除",
+    "confirm": "確認",
+    "yes": "はい",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "save": "保存",
+    "done": "完了",
+    "create": "作成",
+    "download": "ダウンロード",
+    "generate": "生成"
+  },
+
+  "sourceTypes": {
+    "uploadFiles": "ファイルをアップロード",
+    "website": "ウェブサイト",
+    "link": "リンク",
+    "url": "URL",
+    "pastedText": "テキストを貼り付け",
+    "drive": "ドライブ",
+    "youtube": "YouTube"
+  },
+
+  "placeholders": {
+    "pasteUrl": "貼り付け",
+    "enterUrl": "URLを入力",
+    "pasteLinks": "リンク"
+  },
+
+  "sourceNames": {
+    "pastedText": "貼り付けたテキスト"
+  },
+
+  "contentTypes": {
+    "audio": "音声",
+    "video": "動画",
+    "presentation": "プレゼンテーション",
+    "slides": "スライド",
+    "infographic": "インフォグラフィック",
+    "report": "レポート",
+    "briefing": "ブリーフィング資料",
+    "dataTable": "データテーブル",
+    "table": "表"
+  },
+
+  "contentOptions": {
+    "videoStyles": {
+      "classroom": "教室",
+      "documentary": "ドキュメンタリー",
+      "animated": "アニメーション",
+      "corporate": "企業向け",
+      "cinematic": "シネマティック",
+      "minimalist": "ミニマリスト"
+    },
+    "videoFormats": {
+      "brief": "簡潔",
+      "explainer": "説明動画"
+    },
+    "presentationStyles": {
+      "detailedSlideshow": "詳細なスライドショー",
+      "presenterNotes": "発表者用ノート"
+    },
+    "presentationLengths": {
+      "short": "短い",
+      "default": "標準"
+    },
+    "infographicFormats": {
+      "horizontal": "横向き",
+      "vertical": "縦向き"
+    },
+    "reportFormats": {
+      "summary": "概要",
+      "detailed": "詳細"
+    }
+  },
+
+  "dialogs": {
+    "selectLanguage": "言語を選択",
+    "language": "言語"
+  },
+
+  "actions": {
+    "openInSheets": "スプレッドシートで開く",
+    "openInSlides": "スライドで開く",
+    "deepDive": "ディープダイブ",
+    "audioOverview": "音声の概要",
+    "addToSources": "ソースに追加",
+    "convertToSource": "ソースに変換"
+  },
+
+  "status": {
+    "generating": "生成中...",
+    "processing": "処理中...",
+    "ready": "完了"
+  },
+
+  "errors": {
+    "error": "エラー",
+    "rateLimitReached": "1日の上限に達しました"
+  }
+}

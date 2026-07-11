@@ -15,7 +15,12 @@ import { existsSync } from 'fs';
 import { randomDelay, realisticClick, humanType } from '../utils/stealth-utils.js';
 import { log } from '../utils/logger.js';
 import { CONFIG } from '../config.js';
-import { waitForLatestAnswer, snapshotAllResponses, isErrorMessage } from '../utils/page-utils.js';
+import {
+  waitForLatestAnswer,
+  snapshotAllResponses,
+  countAnswerContainers,
+  isErrorMessage,
+} from '../utils/page-utils.js';
 import { setLocale, tAll } from '../i18n/index.js';
 
 // Initialize i18n with configured locale
@@ -1698,14 +1703,16 @@ export class ContentManager {
    */
   private async waitForGeneratedContent(
     contentType: ContentType,
-    timeoutMs: number = 600000
+    timeoutMs: number = 600000,
+    baselineContainerCount?: number
   ): Promise<{ source: 'chat' | 'studio'; content: string }> {
     log.info(`  ⏳ Waiting for ${contentType} response (up to ${timeoutMs / 60000} minutes)...`);
 
     // Scroll to bottom to ensure we see all messages
     await this.scrollChatToBottom();
 
-    // Snapshot existing chat responses to ignore them
+    // Snapshot existing chat responses (debug/logging only when a position
+    // baseline is available — new-answer detection then uses DOM position)
     const existingChatResponses = await snapshotAllResponses(this.page);
     log.info(`  📊 Ignoring ${existingChatResponses.length} existing chat responses`);
 
@@ -1715,6 +1722,7 @@ export class ContentManager {
       timeoutMs: timeoutMs,
       pollIntervalMs: 2000, // Poll every 2 seconds
       ignoreTexts: existingChatResponses,
+      baselineContainerCount,
       debug: true, // Enable debug to see what's happening
     });
 
@@ -1925,8 +1933,16 @@ export class ContentManager {
         prompt += `\n\nCustom instructions: ${input.customInstructions}`;
       }
 
+      // Position baseline for new-answer detection — captured before the
+      // message is sent, so the container that appears afterward is
+      // unambiguously the new answer even if its text repeats a prior one.
+      const baselineContainerCount = await countAnswerContainers(this.page);
       await this.sendChatMessage(prompt);
-      const result = await this.waitForGeneratedContent('audio_overview', 600000);
+      const result = await this.waitForGeneratedContent(
+        'audio_overview',
+        600000,
+        baselineContainerCount
+      );
 
       if (result.content && result.content.length > 100) {
         log.success(`  ✅ Audio overview script generated via ${result.source}`);

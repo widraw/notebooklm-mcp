@@ -253,6 +253,23 @@ export async function snapshotAllResponses(page: Page): Promise<string[]> {
 }
 
 /**
+ * Count `.to-user-container` elements (the primary answer-container selector).
+ *
+ * Used as a position-based baseline: NotebookLM adds exactly one new
+ * `.to-user-container` per submitted question, so "index >= baseline" reliably
+ * identifies the new answer even when its text happens to match a prior
+ * answer's text (e.g. two questions both answered "Yes"). Text-hash dedup
+ * alone cannot distinguish that case — see `extractLatestText`.
+ */
+export async function countAnswerContainers(page: Page): Promise<number> {
+  try {
+    return (await page.$$('.to-user-container')).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Count the number of visible assistant response elements
  */
 export async function countResponseElements(page: Page): Promise<number> {
@@ -304,6 +321,14 @@ export async function waitForLatestAnswer(
     timeoutMs?: number;
     pollIntervalMs?: number;
     ignoreTexts?: string[];
+    /**
+     * Count of `.to-user-container` elements captured (via
+     * `countAnswerContainers`) BEFORE the question was submitted. When
+     * provided, the new answer is identified by DOM position (any container
+     * at index >= baseline) instead of by text-hash dedup, so a repeated
+     * answer text (e.g. two "Yes" answers) is still detected correctly.
+     */
+    baselineContainerCount?: number;
     debug?: boolean;
   } = {}
 ): Promise<string | null> {
@@ -312,6 +337,7 @@ export async function waitForLatestAnswer(
     timeoutMs = 120000,
     pollIntervalMs = 1000,
     ignoreTexts = [],
+    baselineContainerCount,
     debug = false,
   } = options;
 
@@ -360,7 +386,13 @@ export async function waitForLatestAnswer(
     }
 
     // Extract latest NEW text
-    const candidate = await extractLatestText(page, knownHashes, debug, pollCount);
+    const candidate = await extractLatestText(
+      page,
+      knownHashes,
+      debug,
+      pollCount,
+      baselineContainerCount
+    );
 
     if (candidate) {
       const normalized = candidate.trim();
@@ -452,19 +484,31 @@ export async function waitForLatestAnswer(
 
 /**
  * Extract the latest NEW response text from the page
- * Uses hash-based comparison for efficiency
+ *
+ * When `baselineContainerCount` is provided, identity is by DOM position:
+ * only `.to-user-container` elements added after the baseline are
+ * considered "new" (scanned from the end, most recent first). This is the
+ * reliable path — NotebookLM adds exactly one new container per submitted
+ * question, so position can't be fooled by a repeated answer text.
+ *
+ * Falls back to hash-based text dedup when no baseline is given (e.g.
+ * `snapshotLatestResponse`, which has no "before" state to compare against).
+ * The hash fallback has a known false-negative: if the new answer's text
+ * happens to match an earlier answer's text, it gets skipped as "known".
  *
  * @param page Playwright page instance
- * @param knownHashes Set of hashes of already-seen response texts
+ * @param knownHashes Set of hashes of already-seen response texts (hash-fallback path only)
  * @param debug Enable debug logging
  * @param pollCount Current poll number (for conditional logging)
+ * @param baselineContainerCount Container count before the question was submitted (position path)
  * @returns First NEW response text found, or null
  */
 async function extractLatestText(
   page: Page,
   knownHashes: Set<number>,
   debug: boolean,
-  pollCount: number
+  pollCount: number,
+  baselineContainerCount?: number
 ): Promise<string | null> {
   // Scroll to bottom periodically to reveal new messages (every 5 polls)
   if (pollCount % 5 === 0) {
@@ -492,6 +536,37 @@ async function extractLatestText(
       log.dim(
         `⏭️ [EXTRACT] Checking ${totalContainers} containers (${knownHashes.size} known hashes)`
       );
+    }
+
+    if (typeof baselineContainerCount === 'number') {
+      // Position-based identity: scan only containers added after the
+      // baseline, most recent first, and return the first with extractable
+      // text. Deliberately does NOT compare text content — a container at a
+      // new position IS the new answer, regardless of what it says.
+      for (let idx = containers.length - 1; idx >= baselineContainerCount; idx--) {
+        const container = containers[idx];
+        try {
+          const textElement = await container.$('.message-text-content');
+          if (textElement) {
+            const text = await textElement.innerText();
+            const sanitized = sanitizeResponseText(text || '');
+            if (sanitized) {
+              log.success(
+                `✅ [EXTRACT] Found new-position text in container[${idx}] (baseline ${baselineContainerCount}): ${sanitized.length} chars`
+              );
+              return sanitized;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+      if (debug && pollCount % 5 === 0) {
+        log.dim(
+          `⏭️ [EXTRACT] No container past baseline ${baselineContainerCount} yet (${totalContainers} total)`
+        );
+      }
+      return null;
     }
 
     if (containers.length > 0) {
@@ -663,6 +738,7 @@ async function extractLatestText(
 export default {
   snapshotLatestResponse,
   snapshotAllResponses,
+  countAnswerContainers,
   countResponseElements,
   sanitizeResponseText,
   waitForLatestAnswer,

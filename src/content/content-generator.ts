@@ -17,7 +17,12 @@
 
 import type { Page } from 'patchright';
 import { randomDelay, realisticClick, humanType } from '../utils/stealth-utils.js';
-import { waitForLatestAnswer, snapshotAllResponses, isErrorMessage } from '../utils/page-utils.js';
+import {
+  waitForLatestAnswer,
+  snapshotAllResponses,
+  countAnswerContainers,
+  isErrorMessage,
+} from '../utils/page-utils.js';
 import { log } from '../utils/logger.js';
 import type { ContentType, ContentGenerationInput, ContentGenerationResult } from './types.js';
 import {
@@ -569,11 +574,16 @@ export class ContentGenerator {
       // Pass the full input so format options are included in the prompt
       const prompt = buildChatPrompt(config, input);
 
+      // Position baseline for new-answer detection — captured before the
+      // message is sent, so the container that appears afterward is
+      // unambiguously the new answer even if its text repeats a prior one.
+      const baselineContainerCount = await countAnswerContainers(this.page);
+
       // Send the chat message
       await this.sendChatMessage(prompt);
 
       // Wait for response using the proven page-utils approach
-      const result = await this.waitForChatResponse(config);
+      const result = await this.waitForChatResponse(config, baselineContainerCount);
 
       if (result.ready && result.content) {
         log.success(`  ${config.displayName} generated via chat fallback`);
@@ -674,7 +684,10 @@ export class ContentGenerator {
    * @param config Content type configuration
    * @returns Wait result with content
    */
-  private async waitForChatResponse(config: ContentTypeConfig): Promise<ContentWaitResult> {
+  private async waitForChatResponse(
+    config: ContentTypeConfig,
+    baselineContainerCount: number
+  ): Promise<ContentWaitResult> {
     log.info(
       `  Waiting for ${config.displayName} response (up to ${config.waitTimeout / 60000} minutes)...`
     );
@@ -682,7 +695,8 @@ export class ContentGenerator {
     // Scroll to bottom to ensure we see all messages
     await this.scrollChatToBottom();
 
-    // Snapshot existing chat responses to ignore them
+    // Snapshot existing chat responses (debug/logging only — new-answer
+    // detection uses the position baseline captured before the message was sent)
     const existingResponses = await snapshotAllResponses(this.page);
     log.info(`  Ignoring ${existingResponses.length} existing chat responses`);
 
@@ -692,6 +706,7 @@ export class ContentGenerator {
       timeoutMs: config.waitTimeout,
       pollIntervalMs: 2000, // Poll every 2 seconds
       ignoreTexts: existingResponses,
+      baselineContainerCount,
       debug: true, // Enable debug to see what's happening
     });
 

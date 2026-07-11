@@ -733,6 +733,16 @@ class NotebookLMMCPServer {
     process.on('SIGINT', () => requestShutdown('SIGINT'));
     process.on('SIGTERM', () => requestShutdown('SIGTERM'));
 
+    // MCP clients (Claude Desktop, Claude Code, Codex, …) signal disconnect by
+    // closing the stdio pipe, not by sending a signal. Without these handlers
+    // the process stays alive as an orphan because the Patchright/Chromium
+    // browser session keeps the event loop running. 'end' is the graceful EOF
+    // (normal client exit); 'close' covers an abrupt fd close (client killed,
+    // crashed parent, broken pipe). The `shuttingDown` guard makes whichever
+    // fires second a no-op.
+    process.stdin.on('end', () => requestShutdown('stdin-end'));
+    process.stdin.on('close', () => requestShutdown('stdin-close'));
+
     process.on('uncaughtException', (error) => {
       log.error(`💥 Uncaught exception: ${error}`);
       log.error(error.stack || '');

@@ -458,6 +458,7 @@ describe('Page Utils - Exported Functions', () => {
   let snapshotLatestResponse: any;
   let snapshotAllResponses: any;
   let countResponseElements: any;
+  let countAnswerContainers: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -465,6 +466,28 @@ describe('Page Utils - Exported Functions', () => {
     snapshotLatestResponse = module.snapshotLatestResponse;
     snapshotAllResponses = module.snapshotAllResponses;
     countResponseElements = module.countResponseElements;
+    countAnswerContainers = module.countAnswerContainers;
+  });
+
+  describe('countAnswerContainers', () => {
+    it('should count .to-user-container elements', async () => {
+      const mockPage = {
+        $$: jest.fn().mockResolvedValue([{}, {}, {}]),
+      };
+
+      const result = await countAnswerContainers(mockPage);
+      expect(result).toBe(3);
+      expect(mockPage.$$).toHaveBeenCalledWith('.to-user-container');
+    });
+
+    it('should return 0 when the page throws', async () => {
+      const mockPage = {
+        $$: jest.fn().mockRejectedValue(new Error('Page error')),
+      };
+
+      const result = await countAnswerContainers(mockPage);
+      expect(result).toBe(0);
+    });
   });
 
   describe('snapshotLatestResponse', () => {
@@ -756,6 +779,92 @@ describe('Page Utils - Exported Functions', () => {
       });
 
       expect(result).toBeNull();
+    });
+
+    describe('baselineContainerCount (position-based identity)', () => {
+      // Regression test for the hash-collision bug: when a new answer's text
+      // repeats an earlier answer's text (e.g. two questions both answered
+      // "Yes"), text-hash dedup misclassifies the new answer as "already
+      // seen" and the wait times out even though the answer is right there.
+      function makeContainer(text: string) {
+        return {
+          $: jest.fn().mockResolvedValue({
+            innerText: jest.fn().mockResolvedValue(text),
+          }),
+        };
+      }
+
+      it('detects a new answer whose text duplicates an earlier answer, by DOM position', async () => {
+        // Two prior answers already say "Yes"; the new (3rd) container also
+        // says "Yes". Hash-based dedup would skip it as "known" — position
+        // must not.
+        const containers = [makeContainer('Yes'), makeContainer('Yes'), makeContainer('Yes')];
+        const mockPage = {
+          $$: jest.fn().mockResolvedValue(containers),
+          waitForTimeout: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const result = await waitForLatestAnswer(mockPage, {
+          ignoreTexts: ['Yes', 'Yes'], // what snapshotAllResponses captured pre-submit
+          baselineContainerCount: 2, // 2 containers existed before the question was asked
+          timeoutMs: 500,
+          pollIntervalMs: 10,
+        });
+
+        expect(result).toBe('Yes');
+      });
+
+      it('times out with the same setup when no baseline is given (documents the hash-dedup limitation)', async () => {
+        const containers = [makeContainer('Yes'), makeContainer('Yes'), makeContainer('Yes')];
+        const mockPage = {
+          $$: jest.fn().mockResolvedValue(containers),
+          waitForTimeout: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const result = await waitForLatestAnswer(mockPage, {
+          ignoreTexts: ['Yes', 'Yes', 'Yes'],
+          timeoutMs: 200,
+          pollIntervalMs: 50,
+        });
+
+        expect(result).toBeNull();
+      });
+
+      it('does not return a container at or before the baseline', async () => {
+        const containers = [makeContainer('Yes'), makeContainer('Yes')];
+        const mockPage = {
+          $$: jest.fn().mockResolvedValue(containers),
+          waitForTimeout: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const result = await waitForLatestAnswer(mockPage, {
+          baselineContainerCount: 2, // no container has been added past this yet
+          timeoutMs: 100,
+          pollIntervalMs: 50,
+        });
+
+        expect(result).toBeNull();
+      });
+
+      it('picks the last container past the baseline when several are new', async () => {
+        const containers = [
+          makeContainer('Prior answer'),
+          makeContainer('First new answer'),
+          makeContainer('Second new answer'),
+        ];
+        const mockPage = {
+          $$: jest.fn().mockResolvedValue(containers),
+          waitForTimeout: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const result = await waitForLatestAnswer(mockPage, {
+          baselineContainerCount: 1,
+          timeoutMs: 500,
+          pollIntervalMs: 10,
+        });
+
+        expect(result).toBe('Second new answer');
+      });
     });
   });
 });
